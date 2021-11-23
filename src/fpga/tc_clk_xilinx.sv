@@ -30,14 +30,32 @@ module tc_clk_buffer (
 endmodule
 
 // Disable clock gating on FPGA as it behaves differently than expected
-module tc_clk_gating (
+module tc_clk_gating #(
+  /// This paramaeter is a hint for tool/technology specific mappings of this
+  /// tech_cell. It indicates wether this particular clk gate instance is
+  /// required for functional correctness or just instantiated for power
+  /// savings. If IS_FUNCTIONAL == 0, technology specific mappings might
+  /// replace this cell with a feedthrough connection without any gating.
+  parameter bit IS_FUNCTIONAL = 1'b1
+) (
+   (* gated_clock = "yes" *) // Attribute for Vivado to help automatic clock gating conversion
    input  logic clk_i,
    input  logic en_i,
    input  logic test_en_i,
    output logic clk_o
 );
 
-  assign clk_o = clk_i;
+  if (IS_FUNCTIONAL) begin
+    BUFGCE #(
+      .CE_TYPE ( "SYNC" )
+    ) i_gate(
+      .I  ( clk_i            ),
+      .CE ( en_i | test_en_i ),
+      .O  ( clk_o            )
+    );
+  end else begin
+    assign clk_o = clk_i;
+  end
 
 endmodule
 
